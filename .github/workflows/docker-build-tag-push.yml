@@ -25,11 +25,11 @@ jobs:
         run: |
           docker build -t $REPO_NAME:test .
 
-      - name: Run tests
+      - name: Run tests on the image
         run: |
-          echo "Running tests..."
-          # Add your actual test commands here
-          docker run --rm $REPO_NAME:test echo "Tests passed"
+          echo "Running tests on the built image..."
+          # Replace with your actual test commands
+          docker run --rm $REPO_NAME:test echo "Test completed successfully"
 
   build-and-push:
     if: github.event_name == 'push'
@@ -38,8 +38,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Get full history for commit count
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -50,17 +48,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Calculate version from commit count
+      - name: Get safe version number
         id: version
         run: |
-          # Get total commit count for simple versioning
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          VERSION="1.0.$COMMIT_COUNT"
+          # Use GitHub run number for reliable versioning
+          VERSION="1.0.${{ github.run_number }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Using version: $VERSION"
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -68,9 +65,11 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:${{ env.VERSION }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Verify push
+      - name: Display pushed tags
         run: |
-          echo "Successfully pushed:"
-          echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:${{ env.VERSION }}"
-          echo "  - ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest"
+          echo "Successfully pushed the following tags to Docker Hub:"
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:${{ env.VERSION }}"
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_NAME }}:latest"
