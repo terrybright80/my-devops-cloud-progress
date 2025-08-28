@@ -1,2 +1,2 @@
 # scratch note
-# no further adjustments
+# no further adjustments made
